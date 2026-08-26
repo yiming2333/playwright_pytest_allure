@@ -9,7 +9,9 @@ from __future__ import annotations
 import allure
 import pytest
 
-BASE_URL = "http://127.0.0.1:5000"
+from config import settings
+
+BASE_URL = settings.base_url
 
 BROWSERS = ["chromium", "firefox", "webkit"]
 

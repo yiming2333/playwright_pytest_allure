@@ -1,0 +1,29 @@
+{
+  "search_keywords": [
+    {"keyword": "", "expected_count": 8, "desc": "全部商品"},
+    {"keyword": "Pro", "expected_count": 3, "desc": "搜索Pro"},
+    {"keyword": "书籍", "expected_count": 3, "desc": "搜索书籍"},
+    {"keyword": "iPhone", "expected_count": 1, "desc": "搜索iPhone"},
+    {"keyword": "不存在的商品", "expected_count": 0, "desc": "无结果"}
+  ],
+  "search_filters": [
+    {"category": "书籍", "min_price": 0, "max_price": 100, "expected_count": 3, "desc": "低价书籍"},
+    {"category": "", "min_price": 5000, "max_price": 20000, "expected_count": 3, "desc": "高价商品"},
+    {"category": "手机", "min_price": 0, "max_price": 99999, "expected_count": 1, "desc": "手机分类"}
+  ],
+  "register_validations": [
+    {"name": "", "email": "a@b.com", "password": "Abc12345", "password2": "Abc12345", "expected_error": "用户名不能为空", "desc": "空用户名"},
+    {"name": "ab", "email": "a@b.com", "password": "Abc12345", "password2": "Abc12345", "expected_error": "用户名需要3-16位字符", "desc": "用户名太短"},
+    {"name": "admin", "email": "", "password": "Abc12345", "password2": "Abc12345", "expected_error": "邮箱不能为空", "desc": "空邮箱"},
+    {"name": "admin", "email": "invalid", "password": "Abc12345", "password2": "Abc12345", "expected_error": "邮箱格式不正确", "desc": "邮箱格式错误"},
+    {"name": "admin", "email": "a@b.com", "password": "", "password2": "Abc12345", "expected_error": "密码不能为空", "desc": "空密码"},
+    {"name": "admin", "email": "a@b.com", "password": "short", "password2": "short", "expected_error": "密码至少需要8位", "desc": "密码太短"},
+    {"name": "admin", "email": "a@b.com", "password": "alllowercase1", "password2": "alllowercase1", "expected_error": "密码需包含大小写字母和数字", "desc": "密码复杂度不够"},
+    {"name": "admin", "email": "a@b.com", "password": "Abc12345", "password2": "Different1", "expected_error": "两次输入的密码不一致", "desc": "密码不一致"}
+  ],
+  "login_roles": [
+    {"username": "admin", "password": "admin123", "expected_role": "admin", "desc": "管理员"},
+    {"username": "editor", "password": "edit456", "expected_role": "editor", "desc": "编辑员"},
+    {"username": "viewer", "password": "view789", "expected_role": "viewer", "desc": "观察者"}
+  ]
+}

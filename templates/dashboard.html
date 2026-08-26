@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>仪表盘 - Playwright 靶场</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', -apple-system, sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
+        .card { background: white; padding: 24px; margin-bottom: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        h1 { color: #1976d2; margin-bottom: 8px; }
+        h2 { margin-top: 0; color: #1976d2; border-bottom: 2px solid #e3f2fd; padding-bottom: 12px; font-size: 1.3em; margin-bottom: 16px; }
+        h3 { color: #666; }
+        .subtitle { color: #666; margin-bottom: 24px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .badge-admin { background: #e53935; color: white; }
+        .badge-editor { background: #ff9800; color: white; }
+        .badge-viewer { background: #4caf50; color: white; }
+        .nav { background: #1976d2; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .nav a { color: white; text-decoration: none; margin: 0 12px; font-weight: 500; }
+        .nav .user-info { color: rgba(255,255,255,0.9); font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #e0e0e0; padding: 10px; text-align: left; }
+        th { background: #fafafa; font-weight: 600; }
+        .stat-number { font-size: 2em; font-weight: bold; }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="nav">
+        <div>
+            <a href="/">🏠 首页</a>
+            <a href="/dashboard">📊 仪表盘</a>
+            <a href="/logout">🚪 退出</a>
+        </div>
+        <div class="user-info" id="nav-user-info">加载中...</div>
+    </div>
+
+    <h1>📊 控制面板</h1>
+    <p class="subtitle">此页面需要登录才能访问（受保护资源）</p>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:20px;">
+        <div class="card" style="text-align:center;">
+            <h3>总用户数</h3>
+            <p class="stat-number" style="color:#1976d2;">3</p>
+        </div>
+        <div class="card" style="text-align:center;">
+            <h3>商品总数</h3>
+            <p class="stat-number" style="color:#43a047;">8</p>
+        </div>
+        <div class="card" style="text-align:center;">
+            <h3>今日订单</h3>
+            <p class="stat-number" style="color:#ff9800;">42</p>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+        <h2>👤 当前用户信息</h2>
+        <div id="user-detail">加载中...</div>
+    </div>
+
+<script>
+async function loadUserInfo() {
+    try {
+        const resp = await fetch('/api/userinfo');
+        if (resp.status === 401) {
+            window.location.href = '/login';
+            return;
+        }
+        const data = await resp.json();
+        document.getElementById('nav-user-info').innerHTML = '👤 ' + data.name + ' <span class="badge badge-' + data.role + '">' + data.role + '</span>';
+        document.getElementById('user-detail').innerHTML = `
+            <table>
+                <tr><td><strong>用户名</strong></td><td>${data.name}</td></tr>
+                <tr><td><strong>角色</strong></td><td><span class="badge badge-${data.role}">${data.role}</span></td></tr>
+                <tr><td><strong>权限</strong></td><td>${data.role === 'admin' ? '全部权限' : data.role === 'editor' ? '编辑权限' : '只读权限'}</td></tr>
+            </table>
+        `;
+    } catch(e) {
+        window.location.href = '/login';
+    }
+}
+document.addEventListener('DOMContentLoaded', loadUserInfo);
+</script>
+</body>
+</html>

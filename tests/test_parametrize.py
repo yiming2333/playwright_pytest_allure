@@ -5,22 +5,23 @@ from __future__ import annotations
 import allure
 import pytest
 
-BASE_URL = "http://127.0.0.1:5000"
+from config import settings
+from utils.data_loader import load_params, load_ids
+
+BASE_URL = settings.base_url
 
 
 @allure.feature("参数化测试")
 @allure.story("商品搜索参数化")
 @allure.severity(allure.severity_level.NORMAL)
 class TestSearchParametrize:
-    """Product search parameterized tests."""
+    """Product search parameterized tests. 数据从 config/test_data.json 加载。"""
 
-    @pytest.mark.parametrize("keyword, expected_count", [
-        ("", 8),
-        ("Pro", 3),
-        ("书籍", 3),
-        ("iPhone", 1),
-        ("不存在的商品", 0),
-    ], ids=["全部商品", "搜索Pro", "搜索书籍", "搜索iPhone", "无结果"])
+    @pytest.mark.parametrize(
+        "keyword, expected_count",
+        load_params("search_keywords", "keyword", "expected_count"),
+        ids=load_ids("search_keywords"),
+    )
     def test_search_keyword(self, page, keyword, expected_count):
         if keyword:
             page.fill("#search-keyword", keyword)
@@ -30,11 +31,11 @@ class TestSearchParametrize:
         total_text = page.locator("#search-total").text_content()
         assert f"共 {expected_count} 件商品" in total_text
 
-    @pytest.mark.parametrize("category, min_price, max_price, expected_count", [
-        ("书籍", 0, 100, 3),
-        ("", 5000, 20000, 3),
-        ("手机", 0, 99999, 1),
-    ], ids=["低价书籍", "高价商品", "手机分类"])
+    @pytest.mark.parametrize(
+        "category, min_price, max_price, expected_count",
+        load_params("search_filters", "category", "min_price", "max_price", "expected_count"),
+        ids=load_ids("search_filters"),
+    )
     def test_search_filter(self, page, category, min_price, max_price, expected_count):
         if category:
             page.select_option("#search-category", category)
@@ -54,21 +55,13 @@ class TestSearchParametrize:
 @allure.story("注册表单校验")
 @allure.severity(allure.severity_level.CRITICAL)
 class TestFormValidation:
-    """Register form validation - parameterized negative tests."""
+    """Register form validation - parameterized negative tests. 数据外置在 test_data.json."""
 
-    @pytest.mark.parametrize("name, email, password, password2, expected_error", [
-        ("", "a@b.com", "Abc12345", "Abc12345", "用户名不能为空"),
-        ("ab", "a@b.com", "Abc12345", "Abc12345", "用户名需要3-16位字符"),
-        ("admin", "", "Abc12345", "Abc12345", "邮箱不能为空"),
-        ("admin", "invalid", "Abc12345", "Abc12345", "邮箱格式不正确"),
-        ("admin", "a@b.com", "", "Abc12345", "密码不能为空"),
-        ("admin", "a@b.com", "short", "short", "密码至少需要8位"),
-        ("admin", "a@b.com", "alllowercase1", "alllowercase1", "密码需包含大小写字母和数字"),
-        ("admin", "a@b.com", "Abc12345", "Different1", "两次输入的密码不一致"),
-    ], ids=[
-        "空用户名", "用户名太短", "空邮箱", "邮箱格式错误",
-        "空密码", "密码太短", "密码复杂度不够", "密码不一致"
-    ])
+    @pytest.mark.parametrize(
+        "name, email, password, password2, expected_error",
+        load_params("register_validations", "name", "email", "password", "password2", "expected_error"),
+        ids=load_ids("register_validations"),
+    )
     def test_register_validation(self, page, name, email, password, password2, expected_error):
         page.locator("h2:has-text('注册表单')").scroll_into_view_if_needed()
 
