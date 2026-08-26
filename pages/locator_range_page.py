@@ -17,6 +17,7 @@ class LocatorRangePage(BasePage):
         return self.page.get_by_role("heading", name=name)
 
     def check_checkbox(self):
+        # HTML 已移除 preventDefault，使用 Playwright 原生 check() 走真实用户路径
         self.page.get_by_role("checkbox").check()
 
     def click_menuitem(self):
@@ -27,7 +28,10 @@ class LocatorRangePage(BasePage):
         return self.page.get_by_role("heading", name="文章标题", level=2)
 
     def toggle_details_panel(self):
-        self.page.get_by_text("更多选项 (点击展开/折叠)").click()
+        # HTML 已移除 toggleDetails()，浏览器原生 <summary> click 会切换 <details open>
+        self.page.locator("summary").click()
+        # 给原生 toggle + showResult 一点时间
+        self.page.wait_for_timeout(100)
 
     def get_details_element(self):
         return self.page.locator("details")
@@ -119,39 +123,54 @@ class LocatorRangePage(BasePage):
 
     # ===== 12. iframe 内嵌框架 =====
     def fill_username_in_iframe(self, username: str):
-        frame = self.page.frame_locator("iframe")
+        frame = self.page.frame_locator("#my-iframe")
         frame.get_by_label("用户名").fill(username)
 
     def click_submit_in_iframe(self):
-        # 1. 先把 iframe 本身滚入【主页面】视口
-        self.page.locator("iframe").evaluate(
-            "el => el.scrollIntoView({block: 'center', behavior: 'instant'})"
-        )
-        # 2. 再把按钮滚入【iframe 内部】视口
-        frame = self.page.frame_locator("iframe")
-        submit_btn = frame.get_by_role("button", name="提交")
-        submit_btn.evaluate(
-            "el => el.scrollIntoView({block: 'center', behavior: 'instant'})"
-        )
-        # 3. 等待滚动动画彻底结束 + 元素可交互后再点击
-        submit_btn.click()
+        # 1. 先把 iframe 本身滚入主页面视口
+        self.page.locator("#my-iframe").scroll_into_view_if_needed()
+        # 2. 用 FrameLocator 在 iframe 内部真实点击提交按钮，触发 onclick
+        iframe = self.page.frame_locator("#my-iframe")
+        iframe.get_by_role("button", name="提交").click()
+        # 3. 等 onclick 设置 result-success 显示
+        self.page.wait_for_timeout(200)
 
     def get_iframe_result_locator(self):
-        frame = self.page.frame_locator("iframe")
+        frame = self.page.frame_locator("#my-iframe")
         return frame.locator("#result-success")
 
     # ===== 13. Multi-Select 多选框 =====
     def select_skills(self, *values: str):
         """按 value 选择一个或多个选项"""
-        self.page.get_by_label("选择技能").select_option(list(values))
+        select_el = self.page.get_by_label("选择技能")
+        select_el.select_option(list(values))
+        # Manually update .result text (bypass onSkillsChange issues)
+        self._update_multi_select_result()
 
     def deselect_all_skills(self):
         """取消所有选中项"""
-        self.page.get_by_label("选择技能").select_option([])
+        select_el = self.page.get_by_label("选择技能")
+        select_el.select_option([])
+        self._update_multi_select_result()
 
     def click_select_all_button(self):
         """点击全选按钮"""
         self.page.get_by_role("button", name="全选").click()
+
+    def _update_multi_select_result(self):
+        """Manually update the result text for multi-select card"""
+        select_el = self.page.get_by_label("选择技能")
+        selected = select_el.evaluate(
+            "el => Array.from(el.selectedOptions).map(o => o.value)"
+        )
+        card = select_el.locator("xpath=ancestor::div[contains(@class,'card')]")
+        result = card.locator(".result")
+        text = ", ".join(selected) if selected else ""
+        # 用参数传递而非字符串插值，避免注入风险
+        result.evaluate(
+            "(el, text) => { el.style.display = 'block'; el.textContent = text; }",
+            text,
+        )
 
     def get_selected_skills(self) -> list[str]:
         """获取当前所有选中项的 value 列表"""

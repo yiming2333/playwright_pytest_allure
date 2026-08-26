@@ -1,0 +1,10 @@
+# Web 应用与测试框架
+flask>=3.1.0
+playwright>=1.49.0
+pytest>=7.4.0
+pytest-playwright>=0.5.0
+allure-pytest>=2.13.0
+pytest-base-url>=2.1.0
+pytest-xdist>=3.5.0
+pytest-rerunfailures>=14.0
+requests>=2.31.0

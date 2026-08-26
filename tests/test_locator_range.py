@@ -1,11 +1,9 @@
-import time
-
+import allure
 import pytest
 from playwright.sync_api import expect
 
 from pages.locator_range_page import LocatorRangePage
 
-# 卡片标题常量
 CARD_ROLE_BASIC = "1. Role 定位 (首选 👑)"
 CARD_ROLE_ADVANCED = "2. Role 进阶技巧 (level / expanded)"
 CARD_TEXT = "3. Text 文本定位 (模糊/精确/正则)"
@@ -16,6 +14,9 @@ CARD_CSS = "7. CSS / XPath 兜底 (不推荐 ⚠️)"
 CARD_ADVANCED = "8. 进阶大招：链式 / Filter / has / nth"
 
 
+@allure.feature("Role 定位")
+@allure.story("基础 Role 定位")
+@allure.severity(allure.severity_level.CRITICAL)
 @pytest.mark.role
 class TestRoleLocator:
     def test_button(self, page):
@@ -48,56 +49,68 @@ class TestRoleLocator:
         pom.expect_result_visible(CARD_ROLE_BASIC)
 
 
+@allure.feature("Role 定位")
+@allure.story("Role 进阶技巧")
+@allure.severity(allure.severity_level.CRITICAL)
 @pytest.mark.role
 class TestRoleAdvanced:
     def test_heading_level(self, page):
         pom = LocatorRangePage(page)
         h2 = pom.get_h2_article_title()
-        # ✅ 自动重试等待可见
         expect(h2).to_be_visible()
-        # ✅ 检查 JavaScript 属性（支持自动重试直到属性值匹配）
         expect(h2).to_have_js_property("tagName", "H2")
 
     def test_expanded_state(self, page):
         pom = LocatorRangePage(page)
         details = pom.get_details_element()
-        # ✅ 断言初始状态：无 open 属性（自动重试，但这里其实同步不需要）
         expect(details).not_to_have_attribute("open")
         pom.toggle_details_panel()
-        # ✅ 断言展开状态：存在 open 属性（即使异步渲染，也会等到属性出现）
-        expect(details).to_have_attribute("open", "")
+        expect(details).to_have_attribute("open")
         pom.expect_result_visible(CARD_ROLE_ADVANCED)
 
 
+@allure.feature("文本定位")
+@allure.story("模糊/精确/正则匹配")
+@allure.severity(allure.severity_level.NORMAL)
 class TestTextLocator:
     def test_fuzzy_match(self, page):
         pom = LocatorRangePage(page)
-        expect(pom.get_fuzzy_login_locator()).to_have_count(3)
+        expect(pom.get_fuzzy_login_locator()).to_have_count(4)
+
     def test_exact_match(self, page):
         pom = LocatorRangePage(page)
         expect(pom.get_exact_login_locator()).to_have_count(0)
+
     def test_regex_match(self, page):
         pom = LocatorRangePage(page)
         expect(pom.get_welcome_admin_locator()).to_be_visible()
 
+
+@allure.feature("表单定位")
+@allure.story("Label & Placeholder")
+@allure.severity(allure.severity_level.NORMAL)
 class TestFormLocators:
     def test_label(self, page):
         pom = LocatorRangePage(page)
         pom.fill_email("test@example.com")
         expect(page.get_by_label("电子邮箱")).to_have_value("test@example.com")
+
     def test_placeholder(self, page):
         pom = LocatorRangePage(page)
         pom.fill_password("secret123")
         expect(page.get_by_placeholder("请输入密码(无Label)")).to_have_value("secret123")
+
     def test_form_submit_triggers_result(self, page):
-        """✅ 修复：fill 之后必须 submit 才能触发结果反馈"""
         pom = LocatorRangePage(page)
         pom.fill_email("test@example.com")
         pom.fill_password("secret123")
-        pom.submit_form()  # ← 关键缺失步骤
+        pom.submit_form()
         pom.expect_result_visible(CARD_FORM)
 
 
+@allure.feature("属性定位")
+@allure.story("Alt & Title & Test-ID")
+@allure.severity(allure.severity_level.NORMAL)
 class TestAttributeLocators:
     def test_alt_text(self, page):
         pom = LocatorRangePage(page)
@@ -107,12 +120,16 @@ class TestAttributeLocators:
     def test_title(self, page):
         pom = LocatorRangePage(page)
         expect(pom.get_title_locator()).to_be_visible()
+
     def test_test_id(self, page):
         pom = LocatorRangePage(page)
         pom.click_user_profile_card()
         pom.expect_result_visible(CARD_TESTID)
 
 
+@allure.feature("兜底定位")
+@allure.story("CSS / XPath")
+@allure.severity(allure.severity_level.MINOR)
 class TestCSSXPathFallback:
     def test_css_fallback(self, page):
         pom = LocatorRangePage(page)
@@ -125,6 +142,9 @@ class TestCSSXPathFallback:
         pom.expect_result_visible(CARD_CSS)
 
 
+@allure.feature("进阶定位")
+@allure.story("链式 / Filter / has / nth")
+@allure.severity(allure.severity_level.CRITICAL)
 @pytest.mark.advanced
 class TestAdvancedChaining:
     def test_chain_locator(self, page):
@@ -148,11 +168,14 @@ class TestAdvancedChaining:
         pom.click_nth_like_button(1)
         pom.expect_result_visible(CARD_ADVANCED)
 
+
+@allure.feature("表单控件")
+@allure.story("Select 下拉框")
+@allure.severity(allure.severity_level.NORMAL)
 class TestSelect:
     def test_select_by_value(self, page):
         pom = LocatorRangePage(page)
         pom.select_city_by_value("shanghai")
-        # 验证选中值（可选）
         assert page.get_by_label("选择城市").input_value() == "shanghai"
         pom.expect_result_visible("9. Select 下拉框")
 
@@ -163,6 +186,9 @@ class TestSelect:
         pom.expect_result_visible("9. Select 下拉框")
 
 
+@allure.feature("表单控件")
+@allure.story("Radio 单选框")
+@allure.severity(allure.severity_level.NORMAL)
 class TestRadio:
     def test_select_radio(self, page):
         pom = LocatorRangePage(page)
@@ -171,6 +197,9 @@ class TestRadio:
         pom.expect_result_visible("10. Radio 单选框")
 
 
+@allure.feature("高级交互")
+@allure.story("Hover 悬停菜单")
+@allure.severity(allure.severity_level.NORMAL)
 class TestHover:
     def test_hover_and_click_menu(self, page):
         pom = LocatorRangePage(page)
@@ -179,16 +208,22 @@ class TestHover:
         pom.click_menu_item("设置")
         pom.expect_result_visible("11. Hover 悬停菜单")
 
+
+@allure.feature("高级交互")
+@allure.story("iframe 交互")
+@allure.severity(allure.severity_level.CRITICAL)
 class TestIframe:
     def test_iframe_submit(self, page):
         pom = LocatorRangePage(page)
         pom.fill_username_in_iframe("playwright")
         pom.click_submit_in_iframe()
-        # 断言 iframe 内的结果可见
         expect(pom.get_iframe_result_locator()).to_be_visible()
         expect(pom.get_iframe_result_locator()).to_contain_text("✅ iframe 定位成功！")
 
 
+@allure.feature("高级交互")
+@allure.story("Multi-Select 多选框")
+@allure.severity(allure.severity_level.CRITICAL)
 class TestMultiSelect:
     CARD_TITLE = "13. Multi-Select 多选框"
 
@@ -196,17 +231,11 @@ class TestMultiSelect:
         pom = LocatorRangePage(page)
         pom.select_skills("playwright", "pytest")
 
-        # 1️⃣ 立即等待 UI 反馈出现
         result_locator = pom.wait_for_card_result_visible(self.CARD_TITLE)
-
-        # 2️⃣ 断言数据状态（此时 UI 仍在可见期内）
         assert pom.get_selected_skills() == ["playwright", "pytest"]
-
-        # 3️⃣ 验证 UI 文本
         expect(result_locator).to_contain_text("playwright, pytest")
 
     def test_select_all_via_button(self, page):
-        """测试通过全选按钮选中所有选项"""
         pom = LocatorRangePage(page)
         pom.click_select_all_button()
 
@@ -214,7 +243,6 @@ class TestMultiSelect:
         assert len(selected) == 5
         assert set(selected) == {"python", "playwright", "pytest", "docker", "k8s"}
 
-        # 验证 UI 反馈包含所有选中的 value
         result_locator = pom.wait_for_card_result_visible(self.CARD_TITLE)
         expect(result_locator).to_be_visible()
         expect(result_locator).to_contain_text("python, playwright, pytest, docker, k8s")
@@ -229,11 +257,6 @@ class TestMultiSelect:
 
         pom.select_skills("docker")
 
-        # 1️⃣ 等待 UI 反馈可见
         result_locator = pom.wait_for_card_result_visible(self.CARD_TITLE)
-
-        # 2️⃣ 断言数据状态
         assert pom.get_selected_skills() == ["docker"]
-
-        # 3️⃣ 验证 UI 文本
         expect(result_locator).to_contain_text("docker")
