@@ -118,6 +118,22 @@ def logout():
     resp.delete_cookie("user_role")
     return resp
 
+# 在 api_userinfo 后面添加
+@app.route("/api/reset", methods=["POST"])
+def api_reset():
+    """Reset mock database to initial state for test isolation."""
+    global PRODUCTS_DB
+    PRODUCTS_DB = [
+        {"id": 1, "name": "iPhone 15 Pro", "category": "手机", "price": 8999, "stock": 50},
+        {"id": 2, "name": "MacBook Pro 16", "category": "笔记本", "price": 19999, "stock": 20},
+        {"id": 3, "name": "AirPods Pro 2", "category": "耳机", "price": 1899, "stock": 100},
+        {"id": 4, "name": "iPad Air", "category": "平板", "price": 4799, "stock": 35},
+        {"id": 5, "name": "Playwright 实战指南", "category": "书籍", "price": 89, "stock": 200},
+        {"id": 6, "name": "Python 编程从入门到实践", "category": "书籍", "price": 69, "stock": 150},
+        {"id": 7, "name": "Docker 深入浅出", "category": "书籍", "price": 79, "stock": 80},
+        {"id": 8, "name": "Apple Watch Ultra", "category": "手表", "price": 6299, "stock": 15},
+    ]
+    return jsonify({"status": "reset", "count": len(PRODUCTS_DB)})
 
 if __name__ == "__main__":
     # Windows GBK 控制台下 emoji print 会抛 UnicodeEncodeError 直接崩溃，
@@ -138,4 +154,4 @@ if __name__ == "__main__":
     print("   admin  / admin123  (管理员)")
     print("   editor / edit456   (编辑员)")
     print("   viewer / view789   (观察者)")
-    app.run(debug=False, port=5000, threaded=True)
+    app.run(host='0.0.0.0',debug=False, port=5000, threaded=True)

@@ -9,10 +9,9 @@
 
 from __future__ import annotations
 # conftest.py
-import threading
+import os
 import time
 import requests
-from mock_server import app
 import pytest
 from playwright.sync_api import Page
 
@@ -72,9 +71,9 @@ def auth_state(tmp_path_factory, playwright, mock_server: str) -> str:
 
     page.goto(base_url)  # ← 用动态 URL
     context.add_cookies([
-        {"name": "auth_token", "value": token, "domain": "127.0.0.1", "path": "/"},
-        {"name": "username", "value": username, "domain": "127.0.0.1", "path": "/"},
-        {"name": "user_role", "value": "admin", "domain": "127.0.0.1", "path": "/"},
+        {"name": "auth_token", "value": token, "url": base_url},
+        {"name": "username", "value": username, "url": base_url},
+        {"name": "user_role", "value": "admin", "url": base_url},
     ])
 
     context.storage_state(path=str(state_file))
@@ -158,48 +157,37 @@ def api_client(auth_state: str, mock_server: str):
     client.close()
 
 
+
+
+# 将原有的 mock_server fixture 完全替换为：
 @pytest.fixture(scope="session", autouse=True)
 def mock_server():
     """
-    在整个测试会话期间自动启动 Mock Server。
-    scope="session" 确保所有测试用例共享同一个服务实例和内存数据。
+    从环境变量获取 Mock Server 地址，并等待服务就绪。
+    不再负责启动 Flask，仅做健康检查。
     """
-    # ⚠️ 关键：Flask 的 render_template 依赖 templates 目录
-    # 必须显式指定 template_folder，防止在 Docker WORKDIR 中找不到模板
-    import os
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    app.template_folder = os.path.join(base_dir, "templates")
-
-    # 在后台线程启动 Flask
-    # threaded=True 已在你的源码中设置，这里保持
-    # use_reloader=False 禁止热重载，避免子进程 fork 导致端口冲突
-    server_thread = threading.Thread(
-        target=lambda: app.run(
-            host="127.0.0.1",
-            port=5000,
-            debug=False,
-            use_reloader=False,
-            threaded=True
-        ),
-        daemon=True
-    )
-    server_thread.start()
-
-    # 等待服务就绪（轮询健康检查）
+    base_url = os.getenv("BASE_URL", "http://127.0.0.1:5000")
     max_retries = 30
     for i in range(max_retries):
         try:
-            resp = requests.get("http://127.0.0.1:5000/", timeout=2)
+            resp = requests.get(f"{base_url}/", timeout=2)
             if resp.status_code == 200:
-                print(f"\n✅ Mock Server ready at http://127.0.0.1:5000")
+                print(f"\n✅ Mock Server ready at {base_url}")
                 break
         except (requests.ConnectionError, requests.Timeout):
             time.sleep(0.5)
     else:
         raise RuntimeError(
-            f"Mock Server failed to start after {max_retries * 0.5}s. "
-            "Check if port 5000 is available or templates/ directory exists."
+            f"Mock Server at {base_url} not ready after {max_retries * 0.5}s. "
+            "Make sure the mock_server service is running."
         )
+    return base_url
 
-    yield "http://127.0.0.1:5000"
-    # daemon=True 线程随 pytest 主进程退出自动终止，无需手动 cleanup
+@pytest.fixture(autouse=True, scope="function")
+def reset_mock_data(mock_server: str):
+    """每个测试前重置 Mock Server 数据到初始状态."""
+    try:
+        requests.post(f"{mock_server}/api/reset", timeout=2)
+    except Exception as e:
+        log.warning(f"Failed to reset mock data: {e}")
+    yield
