@@ -8,8 +8,11 @@
 """
 
 from __future__ import annotations
-
-import allure
+# conftest.py
+import threading
+import time
+import requests
+from mock_server import app
 import pytest
 from playwright.sync_api import Page
 
@@ -41,24 +44,25 @@ def _screenshot_on_failure(request, page: Page):
 
 # ========== Session-level Fixture: Global login state ==========
 @pytest.fixture(scope="session")
-def auth_state(tmp_path_factory, playwright) -> str:
+def auth_state(tmp_path_factory, playwright, mock_server: str) -> str:
     """
     Session 级登录一次，持久化 storage_state 供所有用例复用。
 
-    使用 pytest-playwright 的 playwright fixture，避免 asyncio 事件循环冲突。
-    账号从 settings 读取（敏感信息走环境变量）。
+    ⚠️ 依赖 mock_server：确保 Flask 服务就绪后再发起登录请求。
     """
     state_file = tmp_path_factory.mktemp("auth") / "state.json"
 
-    log.info(f"开始 session 级登录: {settings.base_url}")
+    # ✅ 使用 mock_server 返回的动态 URL，而非硬编码 settings.base_url
+    base_url = mock_server
+
+    log.info(f"开始 session 级登录: {base_url}")
     browser = playwright.chromium.launch(headless=True)
     context = browser.new_context()
     page = context.new_page()
 
-    # 用配置层的账号
     username, password = settings.account("admin")
-    resp = __import__("requests").post(
-        f"{settings.base_url}/api/login",
+    resp = requests.post(
+        f"{base_url}/api/login",  # ← 用动态 URL
         json={"username": username, "password": password},
         timeout=10,
     )
@@ -66,7 +70,7 @@ def auth_state(tmp_path_factory, playwright) -> str:
     token = resp.json().get("token", "")
     log.info(f"登录成功: user={username} role={resp.json().get('role')}")
 
-    page.goto(settings.base_url)
+    page.goto(base_url)  # ← 用动态 URL
     context.add_cookies([
         {"name": "auth_token", "value": token, "domain": "127.0.0.1", "path": "/"},
         {"name": "username", "value": username, "domain": "127.0.0.1", "path": "/"},
@@ -122,15 +126,11 @@ def browser_type(request, playwright, browser_name):
 
 # ========== Function-level Fixture: Navigate to home page ==========
 @pytest.fixture(autouse=True)
-def navigate_to_home(request, page: Page):
-    """每个用例前重置到首页 + 清空 localStorage。
-
-    使用绝对 URL（不依赖 pytest-base-url），确保 pytest-xdist 并发 worker 下稳定。
-    带 @pytest.mark.no_home_navigation 的用例跳过（如需要从 /login 开始）。
-    """
+def navigate_to_home(request, page: Page, mock_server: str):
+    """每个用例前重置到首页 + 清空 localStorage。"""
     if request.node.get_closest_marker("no_home_navigation"):
         return
-    page.goto(f"{settings.base_url}/")
+    page.goto(f"{mock_server}/")  # ← 用动态 URL 替代 settings.base_url
     try:
         page.evaluate("localStorage.clear()")
     except Exception:
@@ -139,7 +139,7 @@ def navigate_to_home(request, page: Page):
 
 # ========== 共享 fixture: ApiClient ==========
 @pytest.fixture
-def api_client(auth_state: str):
+def api_client(auth_state: str, mock_server: str):
     """提供配置好的 ApiClient（已注入登录态 cookie）。
 
     用法：
@@ -150,9 +150,56 @@ def api_client(auth_state: str):
     import json
     from pathlib import Path
 
-    client = ApiClient(base_url=settings.base_url)
+    client = ApiClient(base_url=mock_server)
     # 复用 auth_state 的 cookie，避免重复登录
     state = json.loads(Path(auth_state).read_text(encoding="utf-8"))
     client.inject_cookies(state.get("cookies", []))
     yield client
     client.close()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_server():
+    """
+    在整个测试会话期间自动启动 Mock Server。
+    scope="session" 确保所有测试用例共享同一个服务实例和内存数据。
+    """
+    # ⚠️ 关键：Flask 的 render_template 依赖 templates 目录
+    # 必须显式指定 template_folder，防止在 Docker WORKDIR 中找不到模板
+    import os
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    app.template_folder = os.path.join(base_dir, "templates")
+
+    # 在后台线程启动 Flask
+    # threaded=True 已在你的源码中设置，这里保持
+    # use_reloader=False 禁止热重载，避免子进程 fork 导致端口冲突
+    server_thread = threading.Thread(
+        target=lambda: app.run(
+            host="127.0.0.1",
+            port=5000,
+            debug=False,
+            use_reloader=False,
+            threaded=True
+        ),
+        daemon=True
+    )
+    server_thread.start()
+
+    # 等待服务就绪（轮询健康检查）
+    max_retries = 30
+    for i in range(max_retries):
+        try:
+            resp = requests.get("http://127.0.0.1:5000/", timeout=2)
+            if resp.status_code == 200:
+                print(f"\n✅ Mock Server ready at http://127.0.0.1:5000")
+                break
+        except (requests.ConnectionError, requests.Timeout):
+            time.sleep(0.5)
+    else:
+        raise RuntimeError(
+            f"Mock Server failed to start after {max_retries * 0.5}s. "
+            "Check if port 5000 is available or templates/ directory exists."
+        )
+
+    yield "http://127.0.0.1:5000"
+    # daemon=True 线程随 pytest 主进程退出自动终止，无需手动 cleanup
