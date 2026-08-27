@@ -16,6 +16,26 @@ BASE_URL = settings.base_url
 BROWSERS = ["chromium", "firefox", "webkit"]
 
 
+@pytest.fixture(autouse=True)
+def _verify_real_browser(page, request):
+    """防回归断言：真实启动的浏览器必须与用例参数指定的浏览器一致。
+
+    历史教训：indirect 参数化曾被插件原生 browser_type fixture 静默忽略
+    （原生 fixture 只认 --browser 命令行参数，不读 request.param），
+    导致 12 条用例 ID 显示 firefox/webkit、实际全程跑 chromium。
+    conftest.py 已覆写 browser_type 修复此问题；本断言确保它永不复发——
+    只要参数与真实浏览器不符，用例会立刻失败而不是静默降级。
+    """
+    callspec = getattr(request.node, "callspec", None)
+    if callspec and "browser_type" in callspec.params:
+        expected = callspec.params["browser_type"]
+        actual = page.context.browser.browser_type.name
+        assert actual == expected, (
+            f"用例参数要求 {expected}，实际启动的是 {actual} —— "
+            f"indirect 参数化失效，请检查 conftest.py 的 browser_type 覆写"
+        )
+
+
 @allure.feature("多浏览器测试")
 @allure.story("跨浏览器兼容性")
 @allure.severity(allure.severity_level.CRITICAL)
@@ -24,6 +44,8 @@ class TestCrossBrowser:
     """Cross-browser compatibility verification.
 
     Each test is automatically executed on chromium, firefox, and webkit.
+    （依赖 conftest.py 覆写的 browser_type fixture 消费 indirect 参数；
+    _verify_real_browser 会校验浏览器真实切换。）
     """
 
     def test_homepage_loads(self, page, browser_type):

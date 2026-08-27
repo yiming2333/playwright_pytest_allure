@@ -100,6 +100,26 @@ def browser_type_launch_args(browser_type_launch_args: dict) -> dict:
     }
 
 
+# ========== Multi-browser: 让 indirect 参数化真正生效 ==========
+@pytest.fixture(scope="session")
+def browser_type(request, playwright, browser_name):
+    """覆写 pytest-playwright 的 browser_type：消费 indirect 参数化传入的浏览器名。
+
+    为什么需要覆写：插件原生 fixture 签名是 `browser_type(playwright, browser_name)`，
+    只认 `--browser` 命令行参数（browser_name），不读 request.param。因此
+    @pytest.mark.parametrize("browser_type", [...], indirect=True) 传入的
+    "firefox"/"webkit" 会被静默丢弃——用例 ID 显示 [chromium-firefox]，
+    实际却始终跑 chromium（多浏览器测试形同虚设）。
+
+    修复策略：优先消费用例传入的 request.param；未参数化的用例回退 browser_name，
+    行为与原生完全一致。
+    """
+    name = getattr(request, "param", None) or browser_name
+    if name != browser_name:
+        log.info(f"多浏览器参数化生效: {name}（--browser 当前默认为 {browser_name}）")
+    return getattr(playwright, name)
+
+
 # ========== Function-level Fixture: Navigate to home page ==========
 @pytest.fixture(autouse=True)
 def navigate_to_home(request, page: Page):

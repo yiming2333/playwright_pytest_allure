@@ -140,40 +140,23 @@ class LocatorRangePage(BasePage):
         return frame.locator("#result-success")
 
     # ===== 13. Multi-Select 多选框 =====
+    # select_option 会派发真实的 change 事件，页面的 onSkillsChange 会原生更新 .result。
+    # 注意：测试侧不得用 evaluate 手动改 DOM 来"帮"页面出结果——
+    # 那样用例验证的就成了测试代码自己，而非页面真实行为。
     def select_skills(self, *values: str):
-        """按 value 选择一个或多个选项"""
-        select_el = self.page.get_by_label("选择技能")
-        select_el.select_option(list(values))
-        # Manually update .result text (bypass onSkillsChange issues)
-        self._update_multi_select_result()
+        """按 value 选择一个或多个选项（真实触发页面 onchange）"""
+        self.page.get_by_label("选择技能").select_option(list(values))
 
     def deselect_all_skills(self):
         """取消所有选中项"""
-        select_el = self.page.get_by_label("选择技能")
-        select_el.select_option([])
-        self._update_multi_select_result()
+        self.page.get_by_label("选择技能").select_option([])
 
     def click_select_all_button(self):
         """点击全选按钮"""
         self.page.get_by_role("button", name="全选").click()
 
-    def _update_multi_select_result(self):
-        """Manually update the result text for multi-select card"""
-        select_el = self.page.get_by_label("选择技能")
-        selected = select_el.evaluate(
-            "el => Array.from(el.selectedOptions).map(o => o.value)"
-        )
-        card = select_el.locator("xpath=ancestor::div[contains(@class,'card')]")
-        result = card.locator(".result")
-        text = ", ".join(selected) if selected else ""
-        # 用参数传递而非字符串插值，避免注入风险
-        result.evaluate(
-            "(el, text) => { el.style.display = 'block'; el.textContent = text; }",
-            text,
-        )
-
     def get_selected_skills(self) -> list[str]:
-        """获取当前所有选中项的 value 列表"""
+        """获取当前所有选中项的 value 列表（只读，不修改页面）"""
         return self.page.get_by_label("选择技能").evaluate(
             "el => Array.from(el.selectedOptions).map(o => o.value)"
         )

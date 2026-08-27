@@ -120,6 +120,13 @@ def logout():
 
 
 if __name__ == "__main__":
+    # Windows GBK 控制台下 emoji print 会抛 UnicodeEncodeError 直接崩溃，
+    # 强制 stdout 走 UTF-8（兼容 PyCharm/UTF-8 终端，无副作用）
+    try:
+        import sys
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     print("🚀 Playwright 全能靶场 v3.0 已启动")
     print("📍 访问地址: http://127.0.0.1:5000")
     print("📍 登录页面: http://127.0.0.1:5000/login")

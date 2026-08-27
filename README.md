@@ -46,7 +46,7 @@ playwright-pytest-allure/
 │
 ├── tests/                        # 【测试层】
 │   ├── __init__.py
-│   ├── test_locator_range.py     # 33 条：13 类定位器与交互
+│   ├── test_locator_range.py     # 31 条：13 类定位器与交互
 │   ├── test_parametrize.py       # 22 条：参数化搜索/表单/登录/购物车
 │   ├── test_multi_browser.py     # 12 条：3 浏览器 × 4 场景
 │   └── test_api_ui_hybrid.py     #  2 条：API+UI 混合验证
@@ -260,7 +260,7 @@ function ─> _screenshot_on_failure (autouse, 失败时调 utils.screenshot)
 
 | 测试文件 | 用例数 | 覆盖内容 |
 |----------|--------|----------|
-| `test_locator_range.py` | 33 | Role/Text/Label/Alt/TestID/CSS/XPath/链式/Select/Radio/Hover/iframe/MultiSelect |
+| `test_locator_range.py` | 31 | Role/Text/Label/Alt/TestID/CSS/XPath/链式/Select/Radio/Hover/iframe/MultiSelect |
 | `test_parametrize.py` | 22 | 搜索关键词×5、搜索过滤×3、注册校验×8、登录角色×3、购物车×2、注册正向×1（数据外置 JSON） |
 | `test_multi_browser.py` | 12 | chromium/firefox/webkit × 首页/悬停/iframe/表单 |
 | `test_api_ui_hybrid.py` | 2 | API 搜索 + UI 验证、API 登录 + UI 访问（用 ApiClient） |
@@ -317,6 +317,15 @@ A: Mock 服务未启动。先 `python mock_server.py` 再跑测试。
 **Q: 多浏览器用例报 `Executable doesn't exist`？**
 
 A: 执行 `playwright install chromium firefox webkit` 安装浏览器二进制。
+
+**Q: 怎么确认多浏览器用例真的在跑 firefox/webkit，而不是全跑 chromium？**
+
+A: 两道保险已内置：
+
+1. `conftest.py` 覆写了 `browser_type` fixture 来消费 `indirect=True` 参数化的 `request.param`。pytest-playwright 原生 fixture 只认 `--browser` 命令行参数，会把 indirect 传入的浏览器名静默丢弃（用例 ID 显示 `[chromium-firefox]` 实际却跑 chromium 的经典陷阱）。
+2. `test_multi_browser.py` 内置 `_verify_real_browser` 防回归断言：真实启动的浏览器若与用例参数不符，用例立刻失败。
+
+验证方式：跑 `pytest tests/test_multi_browser.py` 后查看 `logs/test_*.log`，应出现 `多浏览器参数化生效: firefox/webkit` 日志行。官方全量三浏览器方式：`pytest --browser chromium --browser firefox --browser webkit`（注意：这会把所有用例都参数化到三个浏览器）。
 
 **Q: 测试很慢？**
 
