@@ -16,6 +16,7 @@ venv
 # Docker 自身文件（避免递归复制）
 Dockerfile
 Dockerfile.mock
+Dockerfile.base
 .dockerignore
 docker-compose.yml
 

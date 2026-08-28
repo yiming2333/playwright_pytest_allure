@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mock
+    environment:
+      - TZ=Asia/Shanghai
     ports:
       - "5000:5000"   # 保留，方便调试时用浏览器访问
     healthcheck:
@@ -17,7 +19,13 @@ services:
       dockerfile: Dockerfile
     environment:
       - BASE_URL=http://mock_server:5000
+      - TZ=Asia/Shanghai
+
     depends_on:
       mock_server:
         condition: service_healthy   # 等待 Flask 就绪后再启动
     command: pytest -n auto -v
+    volumes:
+      - ./reports:/app/reports        # 假设你的报告生成在 /app/reports
+      - ./allure-results:/app/allure-results  # 假设 allure 结果在这里
+      - ./logs:/app/logs              # 如果有日志目录
