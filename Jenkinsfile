@@ -28,10 +28,24 @@ pipeline {
         DINGTALK_WEBHOOK     = credentials('dingtalk_webhook')
         DINGTALK_KEYWORD     = '测试'
     }
-
     stages {
         stage('🧹 1. 准备 & 拉取代码') {
             stages {
+                stage('1.0 👤 获取构建用户') {
+                    steps {
+                        script {
+                            try {
+                                wrap([$class: 'BuildUser']) {
+                                    env.TRIGGER_USER = env.BUILD_USER_ID ?: 'unknown'
+                                }
+                            } catch (e) {
+                                echo "⚠️ 无法获取构建用户: ${e.message}"
+                                env.TRIGGER_USER = 'unknown'
+                            }
+                            echo "本次构建触发人: ${env.TRIGGER_USER}"
+                        }
+                    }
+                }
                 stage('1.1 清理工作区') {
                     steps {
                         echo "清理旧报告、日志、缓存..."
@@ -106,7 +120,7 @@ pipeline {
 
                     // environment.properties
                     def envProps = """
-                        Environment=${params.ENV}
+                        Environment=${params.ENV ?: 'dev'}
                         Parallel.Mode=${params.PARALLEL}
                         Trigger.User=${env.TRIGGER_USER ?: 'unknown'}
                         Build.Number=${env.BUILD_NUMBER}
@@ -210,7 +224,7 @@ def sendEmailNotification(String status, String color, String icon) {
             <p>项目 <strong>${env.JOB_NAME}</strong> 构建${status == 'SUCCESS' ? '成功' : '失败'}！</p>
             <ul>
                 <li>构建编号：<strong>#${env.BUILD_NUMBER}</strong></li>
-                <li>环境：${params.ENV}</li>
+                <li>环境：${params.ENV ?: 'dev'}</li>
                 <li>并发：${params.PARALLEL}</li>
                 <li>触发人：${env.TRIGGER_USER ?: '未知'}</li>
                 <li>测试报告：<a href="${env.REPORT_LINK}">${env.REPORT_LINK}</a></li>
@@ -226,7 +240,7 @@ def sendDingTalkNotification(String status, String icon) {
     def text = """### ${titleText}
 - **项目**: ${env.JOB_NAME}
 - **构建号**: #${env.BUILD_NUMBER}
-- **环境**: ${params.ENV}
+- **环境**: ${params.ENV ?: 'dev'}
 - **并发**: ${params.PARALLEL}
 - **触发人**: ${env.TRIGGER_USER ?: '未知'}
 - **[📊 查看测试报告](${env.REPORT_LINK})**
