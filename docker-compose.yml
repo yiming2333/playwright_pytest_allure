@@ -26,7 +26,7 @@ services:
     command: pytest -n 4 -v --alluredir=/app/allure-results
     volumes:
         - ./allure-results:/app/allure-results
-        - ./allure-reports:/app/allure-reports
+        - ./allure-reports:/app/allure-report
         - ./logs:/app/logs
     deploy:
       resources:
