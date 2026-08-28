@@ -15,11 +15,11 @@ pipeline {
 
     environment {
         // Docker Compose 项目名（避免与其它项目冲突）
-        COMPOSE_PROJECT_NAME = 'playwright_test'
+        COMPOSE_PROJECT_NAME = 'playwright_pytest_allure'
         ALLURE_RESULTS       = 'allure-results'
         ALLURE_REPORT_NAME   = 'AllureReport'
         MAIL_RECIPIENT       = 'yiming_2333@sina.com'
-        GIT_URL              = 'https://github.com/yiming2333/playwright_test.git'   // 替换为你的仓库
+        GIT_URL              = 'https://github.com/yiming2333/playwright_pytest_allure.git'   // 替换为你的仓库
         GIT_BRANCH           = 'master'
         GIT_CREDENTIALS_ID   = ''   // 如需要可填写 Jenkins 凭证 ID
         REPORT_LINK          = "${env.JENKINS_URL}job/${env.JOB_NAME}/${env.BUILD_NUMBER}/allure/"
