@@ -1,5 +1,5 @@
-# 使用和测试容器相同的基础镜像（保持环境一致）
-FROM python:3.12-alpine
+# Dockerfile.mock
+FROM python:3.10-alpine
 WORKDIR /app
 RUN apk add --no-cache curl
 
