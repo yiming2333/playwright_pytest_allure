@@ -15,6 +15,7 @@ pipeline {
 
     environment {
         // Docker Compose 项目名（避免与其它项目冲突）
+        PATH = "C:\\Users\\27088\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin;${env.PATH}"
         COMPOSE_PROJECT_NAME = 'playwright_pytest_allure'
         ALLURE_RESULTS       = 'allure-results'
         ALLURE_REPORT_NAME   = 'AllureReport'
