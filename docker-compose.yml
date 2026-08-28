@@ -20,7 +20,7 @@ services:
     environment:
       - BASE_URL=http://mock_server:5000
       - TZ=Asia/Shanghai
-
+    shm_size: '2g'           # 等同于 --shm-size=2g
     depends_on:
       mock_server:
         condition: service_healthy   # 等待 Flask 就绪后再启动
