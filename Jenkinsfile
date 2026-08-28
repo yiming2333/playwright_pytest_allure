@@ -106,7 +106,7 @@ pipeline {
                     def baseUrl = getBaseUrl(params.ENV)  // 从配置文件或逻辑获取
                     bat """
                         set BASE_URL=${baseUrl}
-                        docker-compose -p ${env.COMPOSE_PROJECT_NAME} up --abort-on-container-exit test
+                        docker-compose -p ${env.COMPOSE_PROJECT_NAME} run --rm test ${testCmd}
                     """
                 }
             }
