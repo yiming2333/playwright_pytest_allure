@@ -68,7 +68,7 @@ pipeline {
             steps {
                 echo "构建 mock_server 和 test 镜像..."
                 // 使用 docker compose build（会读取 docker-compose.yml 中的 build 指令）
-                bat "docker compose -p ${env.COMPOSE_PROJECT_NAME} build"
+                bat "docker-compose -p ${env.COMPOSE_PROJECT_NAME} build"
             }
         }
 
@@ -92,7 +92,7 @@ pipeline {
                     def baseUrl = getBaseUrl(params.ENV)  // 从配置文件或逻辑获取
                     bat """
                         set BASE_URL=${baseUrl}
-                        docker compose -p ${env.COMPOSE_PROJECT_NAME} up --abort-on-container-exit test
+                        docker-compose -p ${env.COMPOSE_PROJECT_NAME} up --abort-on-container-exit test
                     """
                 }
             }
@@ -150,7 +150,7 @@ pipeline {
             echo "========== 🧹 收尾清理 =========="
             script {
                 // 停止并移除所有容器、网络、卷（-v 会删除匿名卷，但我们的挂载卷是 bind mount，不会删除宿主机数据）
-                bat "docker compose -p ${env.COMPOSE_PROJECT_NAME} down -v"
+                bat "docker-compose -p ${env.COMPOSE_PROJECT_NAME} down -v"
                 // 归档日志（如果存在）
                 archiveArtifacts artifacts: 'logs/*.log', allowEmptyArchive: true
             }
@@ -167,7 +167,7 @@ pipeline {
             script {
                 // 收集诊断信息（比如容器日志）
                 catchError(buildResult: null, stageResult: null) {
-                    bat "docker compose -p ${env.COMPOSE_PROJECT_NAME} logs --tail=200 > diagnostics.log"
+                    bat "docker-compose -p ${env.COMPOSE_PROJECT_NAME} logs --tail=200 > diagnostics.log"
                     archiveArtifacts artifacts: 'diagnostics.log', allowEmptyArchive: true
                 }
                 notifyAll('FAILURE', 'red', '❌')
