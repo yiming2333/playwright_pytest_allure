@@ -328,6 +328,51 @@
         <div class="result"></div>
     </div>
 
+    <!-- ===== Card 14: 高级交互 (dblclick / type / dragDrop / keyboard) ===== -->
+    <div class="card section-scroll" id="card-advanced">
+        <h2>14. 高级交互 (dblclick / type / dragDrop / keyboard)</h2>
+
+        <!-- 14a: 双击编辑 -->
+        <div style="margin-bottom:15px;">
+            <h4>双击编辑单元格 (dblclick)</h4>
+            <span id="edit-cell" ondblclick="enableEdit(this)"
+                  style="display:inline-block;padding:8px 16px;border:1px dashed #1976d2;border-radius:4px;min-width:200px;cursor:pointer;">双击我编辑</span>
+        </div>
+
+        <!-- 14b: 逐字符输入联想 -->
+        <div style="margin-bottom:15px;">
+            <h4>逐字符输入联想 (type + delay)</h4>
+            <input type="text" id="suggest-input" placeholder="输入 Play..."
+                   oninput="showSuggest(this.value)"
+                   style="padding:8px;border:1px solid #ccc;border-radius:4px;width:200px;" />
+            <div id="suggest-list" style="display:none;border:1px solid #ccc;border-radius:4px;max-height:120px;overflow:auto;margin-top:4px;"></div>
+        </div>
+
+        <!-- 14c: 拖拽排序 -->
+        <div style="margin-bottom:15px;">
+            <h4>拖拽排序 (dragAndDrop)</h4>
+            <div style="display:flex;gap:20px;">
+                <div id="drag-source" style="border:1px solid #ccc;border-radius:4px;padding:10px;min-height:100px;flex:1;">
+                    <div class="drag-item" draggable="true" id="drag-item-1" style="padding:8px;background:#e3f2fd;border-radius:4px;margin-bottom:4px;cursor:grab;">任务A</div>
+                    <div class="drag-item" draggable="true" id="drag-item-2" style="padding:8px;background:#e3f2fd;border-radius:4px;margin-bottom:4px;cursor:grab;">任务B</div>
+                </div>
+                <div id="drop-target" style="border:2px dashed #aaa;border-radius:4px;padding:10px;min-height:100px;flex:1;display:flex;align-items:center;justify-content:center;color:#999;">
+                    <span>拖拽到此处</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 14d: 快捷键 -->
+        <div style="margin-bottom:15px;">
+            <h4>全局快捷键 (Ctrl+K 打开搜索)</h4>
+            <p>按 <kbd>Ctrl</kbd>+<kbd>K</kbd> 打开快速搜索框</p>
+            <input type="text" id="quick-search" placeholder="快速搜索..."
+                   style="display:none;padding:8px;border:2px solid #1976d2;border-radius:4px;width:200px;" />
+        </div>
+
+        <div class="result"></div>
+    </div>
+
 <script>
 // ==================== 工具函数 ====================
 function showToast(msg, type = 'success') {
@@ -554,6 +599,110 @@ function toggleDetails(summaryEl) {
         }
     }
 }
+
+// ==================== Card 14: 高级交互 ====================
+
+// 14a: 双击编辑
+function enableEdit(el) {
+    el.contentEditable = true;
+    el.focus();
+    el.style.background = '#fff3e0';
+    el.addEventListener('blur', function handler() {
+        el.contentEditable = false;
+        el.style.background = '';
+        el.removeEventListener('blur', handler);
+        var card = el.closest('.card');
+        if (card) {
+            var result = card.querySelector('.result');
+            if (result) {
+                result.style.display = 'block';
+                result.textContent = '已编辑: ' + el.textContent;
+                result.style.animation = 'fadeIn 0.3s';
+            }
+        }
+    });
+}
+
+// 14b: 逐字符联想
+function showSuggest(value) {
+    var list = document.getElementById('suggest-list');
+    var all = ['Playwright 实战', 'Python 进阶', 'Playwright 教程', 'Pytest 指南'];
+    var filtered = all.filter(function(s) {
+        return s.toLowerCase().indexOf(value.toLowerCase()) >= 0;
+    });
+    if (value && filtered.length > 0) {
+        list.innerHTML = filtered.map(function(s) {
+            return '<div class="suggest-item" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #eee;">' + s + '</div>';
+        }).join('');
+        list.style.display = 'block';
+        list.querySelectorAll('.suggest-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                document.getElementById('suggest-input').value = item.textContent;
+                list.style.display = 'none';
+            });
+        });
+    } else {
+        list.style.display = 'none';
+    }
+}
+
+// 14c: 拖拽
+function initDragDrop() {
+    var source = document.getElementById('drag-source');
+    var target = document.getElementById('drop-target');
+    if (!source || !target) return;
+
+    var dragged = null;
+    source.querySelectorAll('.drag-item').forEach(function(item) {
+        item.addEventListener('dragstart', function(e) {
+            dragged = e.target;
+            e.target.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        item.addEventListener('dragend', function(e) {
+            e.target.style.opacity = '1';
+        });
+    });
+    target.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    });
+    target.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (dragged) {
+            target.appendChild(dragged);
+            var placeholder = target.querySelector('span');
+            if (placeholder) placeholder.style.display = 'none';
+            var card = target.closest('.card');
+            if (card) {
+                var result = card.querySelector('.result');
+                if (result) {
+                    result.style.display = 'block';
+                    result.textContent = '拖拽成功';
+                    result.style.animation = 'fadeIn 0.3s';
+                }
+            }
+        }
+    });
+}
+
+// 14d: 快捷键
+function initHotkeys() {
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && (e.key === 'k' || e.key === 'K')) {
+            e.preventDefault();
+            var qs = document.getElementById('quick-search');
+            if (qs) {
+                qs.style.display = 'block';
+                qs.focus();
+            }
+        }
+    });
+}
+
+// 页面加载后初始化（script 在 body 底部，DOM 已就绪）
+initDragDrop();
+initHotkeys();
 
 // ==================== Nav User ====================
 function updateNavUser(user) {

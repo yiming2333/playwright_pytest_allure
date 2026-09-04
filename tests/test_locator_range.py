@@ -12,6 +12,7 @@ CARD_ATTR = "5. Alt & Title 属性定位"
 CARD_TESTID = "6. Test-ID 定位 (终极防御 🛡️)"
 CARD_CSS = "7. CSS / XPath 兜底 (不推荐 ⚠️)"
 CARD_ADVANCED = "8. 进阶大招：链式 / Filter / has / nth"
+CARD_ADV_INTERACTION = "14. 高级交互 (dblclick / type / dragDrop / keyboard)"
 
 
 @allure.feature("Role 定位")
@@ -260,3 +261,98 @@ class TestMultiSelect:
         result_locator = pom.wait_for_card_result_visible(self.CARD_TITLE)
         assert pom.get_selected_skills() == ["docker"]
         expect(result_locator).to_contain_text("docker")
+
+
+@allure.feature("高级交互")
+@allure.story("dblclick / type / dragDrop / keyboard")
+@allure.severity(allure.severity_level.NORMAL)
+@pytest.mark.advanced
+class TestAdvancedInteraction:
+    """Card 14 高级交互：覆盖 dblclick / type 逐字符 / dragAndDrop / keyboard 快捷键。"""
+
+    def test_dblclick_edit(self, page):
+        """双击单元格进入编辑模式，输入文本后 blur 触发 .result。"""
+        pom = LocatorRangePage(page)
+        pom.dblclick_edit_cell("Hello World")
+
+        result = pom.wait_for_card_result_visible(CARD_ADV_INTERACTION)
+        expect(result).to_contain_text("已编辑: Hello World")
+
+    def test_type_suggestion(self, page):
+        """逐字符输入触发 oninput 联想，验证联想列表出现且可点击。"""
+        pom = LocatorRangePage(page)
+        pom.type_suggest_input("Play", delay=80)
+
+        # 等待联想列表容器可见（不用 .suggest-item 的 wait_for 避免 strict mode 冲突）
+        page.locator("#suggest-list").wait_for(state="visible", timeout=5000)
+        suggestions = pom.get_suggest_items()
+        assert suggestions.count() >= 2  # "Playwright 实战" + "Playwright 教程"
+
+        pom.click_first_suggest()
+        # 点击后联想列表消失
+        page.locator("#suggest-list").wait_for(state="hidden", timeout=3000)
+
+    def test_drag_and_drop(self, page):
+        """拖拽一个项到目标区域，验证目标区域有 1 个项。"""
+        pom = LocatorRangePage(page)
+        pom.drag_item_to_target("drag-item-1")
+
+        # 等待 .result 显示"拖拽成功"
+        result = pom.wait_for_card_result_visible(CARD_ADV_INTERACTION)
+        expect(result).to_contain_text("拖拽成功")
+        assert pom.get_drop_target_items() == 1
+
+    def test_keyboard_hotkey(self, page):
+        """按 Ctrl+K 打开快速搜索框，验证 input 变为可见。"""
+        pom = LocatorRangePage(page)
+        assert not pom.is_quick_search_visible()
+
+        pom.press_hotkey_open_search()
+        page.wait_for_timeout(200)
+
+        assert pom.is_quick_search_visible()
+
+
+@allure.feature("页面导航")
+@allure.story("reload / goBack / goForward")
+@allure.severity(allure.severity_level.NORMAL)
+class TestNavigation:
+    """覆盖 page.reload() 和 page.go_back()/go_forward() 导航历史操作。"""
+
+    def test_reload_preserves_state(self, page):
+        """刷新页面后，首页内容仍然可见（验证 reload 不破坏页面）。"""
+        from config import settings
+        page.goto(f"{settings.base_url}/")
+        page.wait_for_load_state("networkidle")
+
+        # 刷新前验证页面标题在
+        heading = page.get_by_role("heading", name="1. Role 定位 (首选 👑)")
+        expect(heading).to_be_visible()
+
+        page.reload(wait_until="networkidle")
+
+        # 刷新后验证同一元素仍在
+        heading_after = page.get_by_role("heading", name="1. Role 定位 (首选 👑)")
+        expect(heading_after).to_be_visible()
+
+    def test_go_back_and_forward(self, page):
+        """导航到 dashboard 再返回，验证 URL 随 goBack/goForward 变化。"""
+        from config import settings
+
+        # 起点：首页
+        page.goto(f"{settings.base_url}/")
+        assert page.url.endswith("/")
+
+        # 导航到 dashboard
+        page.goto(f"{settings.base_url}/dashboard")
+        assert "/dashboard" in page.url
+
+        # 后退 → 回到首页
+        page.go_back()
+        page.wait_for_load_state("networkidle")
+        assert page.url.endswith("/")
+
+        # 前进 → 回到 dashboard
+        page.go_forward()
+        page.wait_for_load_state("networkidle")
+        assert "/dashboard" in page.url

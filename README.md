@@ -10,7 +10,8 @@
 
 | 能力 | 说明 |
 |------|------|
-| 67 条端到端用例 | 覆盖 13 类 Playwright 定位器与交互模式 |
+| 67 条端到端用例 | 覆盖 14 类 Playwright 定位器与交互模式（含 dblclick/type/dragDrop/快捷键/导航历史） |
+| 73 条用例（含多浏览器展开） | 67 基础 + 6 条高级交互/导航测试 |
 | 真·跨浏览器 | chromium / firefox / webkit 三浏览器自动参数化 |
 | 参数化 + 数据驱动 | 搜索/表单/登录参数化数据外置到 `config/test_data.json` |
 | API+UI 混合 | `ApiClient` 封装 HTTP，先准备数据再用 Playwright 验证 UI |
@@ -260,11 +261,11 @@ function ─> _screenshot_on_failure (autouse, 失败时调 utils.screenshot)
 
 | 测试文件 | 用例数 | 覆盖内容 |
 |----------|--------|----------|
-| `test_locator_range.py` | 31 | Role/Text/Label/Alt/TestID/CSS/XPath/链式/Select/Radio/Hover/iframe/MultiSelect |
+| `test_locator_range.py` | 39 | Role/Text/Label/Alt/TestID/CSS/XPath/链式/Select/Radio/Hover/iframe/MultiSelect/dblclick/type联想/dragDrop/快捷键/reload/goBack/goForward |
 | `test_parametrize.py` | 22 | 搜索关键词×5、搜索过滤×3、注册校验×8、登录角色×3、购物车×2、注册正向×1（数据外置 JSON） |
 | `test_multi_browser.py` | 12 | chromium/firefox/webkit × 首页/悬停/iframe/表单 |
 | `test_api_ui_hybrid.py` | 2 | API 搜索 + UI 验证、API 登录 + UI 访问（用 ApiClient） |
-| **合计** | **67** | |
+| **合计** | **73** | |
 
 ---
 
@@ -292,8 +293,8 @@ class TestFormValidation:
 
 | 模式 | 耗时 | 备注 |
 |------|------|------|
-| 串行 | ~70s | `pytest` |
-| 并发 `-n auto` | ~40s | 14 worker，约 1.75x 加速 |
+| 串行 | ~80s | `pytest` |
+| 并发 `-n auto` | ~41s | 14 worker，约 1.95x 加速 |
 | 并发 `-n 4` | ~50s | 4 worker，更稳 |
 
 并发没到 14x 是因为 Playwright 浏览器是重资源，多进程同时启动有 IO/CPU 争用。
